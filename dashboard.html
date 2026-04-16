@@ -1182,7 +1182,7 @@
       try {
         const response = await fetch('/admin/logout');
         const data = await response.json();
-        if (data.success) window.location.href = '/admin-login.html';
+        if (data.success) window.location.href = '/login';
       } catch (error) {
         console.error('Logout error:', error);
         showError('حدث خطأ أثناء تسجيل الخروج');
