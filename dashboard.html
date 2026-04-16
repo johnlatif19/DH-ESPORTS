@@ -116,6 +116,13 @@
       backdrop-filter: blur(16px);
       border-left: 1px solid rgba(0, 212, 255, 0.3);
       transition: transform 0.3s ease-in-out;
+      transform: translateX(100%); /* Hidden by default on mobile */
+    }
+    /* Show sidebar on desktop */
+    @media (min-width: 1024px) {
+      #sidebar {
+        transform: translateX(0) !important;
+      }
     }
 
     /* عناصر القائمة */
@@ -168,9 +175,8 @@
       background-color: rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(4px);
       transition: opacity 0.3s ease;
-    }
-    .sidebar-transition {
-      transition: transform 0.3s ease-in-out;
+      display: none;
+      opacity: 0;
     }
     /* منع التمرير عند فتح القائمة */
     body.sidebar-open {
@@ -185,19 +191,17 @@
   <div id="toastHost" class="fixed top-4 right-4 z-[60] space-y-2"></div>
 
   <!-- Mobile backdrop - طبقة خلفية للقائمة الجانبية -->
-  <div id="backdrop" class="fixed inset-0 bg-black/60 hidden z-40"></div>
+  <div id="backdrop" class="fixed inset-0 bg-black/60 z-40"></div>
 
   <div class="min-h-screen relative z-10">
     <div class="lg:flex">
       <!-- Sidebar -->
       <aside
         id="sidebar"
-        class="fixed lg:sticky top-0 right-0 z-50 lg:z-10 h-screen w-[290px] lg:w-[300px]
+        class="fixed top-0 right-0 z-50 h-screen w-[290px]
                transition-transform duration-300 ease-out
-               translate-x-full lg:translate-x-0
-               glass-panel
-               border-l border-primary-light/20
-               shadow-2xl"
+               glass-panel border-l border-primary-light/20 shadow-2xl
+               overflow-y-auto nice-scroll"
       >
         <!-- Brand -->
         <div class="h-16 px-4 flex items-center justify-between border-b border-primary-light/20">
@@ -320,7 +324,7 @@
         </nav>
 
         <!-- Footer -->
-        <div class="absolute bottom-0 right-0 left-0 p-4">
+        <div class="p-4 mt-8">
           <div class="text-xs text-gray-500 text-center border-t border-primary-light/20 pt-4">
             © <span id="yearNow"></span> DH-ESPORTS
           </div>
@@ -603,6 +607,7 @@
                     <tr>
                       <th class="px-5 py-3 text-right font-semibold">الاسم</th>
                       <th class="px-5 py-3 text-right font-semibold">رقم الهاتف</th>
+                      <!-- Removed Date Column -->
                       <th class="px-5 py-3 text-right font-semibold">الإجراءات</th>
                     </tr>
                   </thead>
@@ -856,7 +861,7 @@
     });
 
     // ======================
-    // Sidebar & Backdrop Logic (تم إصلاحها)
+    // Sidebar & Backdrop Logic (تم إصلاحها بشكل كامل)
     // ======================
     const sidebar = document.getElementById('sidebar');
     const backdrop = document.getElementById('backdrop');
@@ -866,25 +871,23 @@
     // دالة فتح القائمة الجانبية
     function openSidebar() {
       if (window.innerWidth < 1024) { // فقط في وضع الجوال
-        sidebar.classList.remove('translate-x-full');
-        backdrop.classList.remove('hidden');
-        document.body.classList.add('sidebar-open'); // منع التمرير
-        // إضافة تأثير الشفافية للـ backdrop
-        backdrop.style.opacity = '0';
+        sidebar.style.transform = 'translateX(0)';
         backdrop.style.display = 'block';
-        setTimeout(() => { backdrop.style.opacity = '1'; }, 10);
+        document.body.classList.add('sidebar-open');
+        setTimeout(() => {
+          backdrop.style.opacity = '1';
+        }, 10);
       }
     }
 
     // دالة إغلاق القائمة الجانبية
     function closeSidebar() {
       if (window.innerWidth < 1024) {
-        sidebar.classList.add('translate-x-full');
+        sidebar.style.transform = 'translateX(100%)';
         backdrop.style.opacity = '0';
         document.body.classList.remove('sidebar-open');
         setTimeout(() => {
-          backdrop.classList.add('hidden');
-          backdrop.style.display = '';
+          backdrop.style.display = 'none';
         }, 300);
       }
     }
@@ -900,24 +903,35 @@
       backdrop.addEventListener('click', closeSidebar);
     }
 
-    // عند تغيير حجم النافذة، إذا كانت القائمة مفتوحة في وضع الجوال وتم تغيير الحجم إلى سطح المكتب
+    // عند تغيير حجم النافذة، تأكد من إعادة تعيين حالة الشريط الجانبي
     window.addEventListener('resize', function() {
       if (window.innerWidth >= 1024) {
-        // إذا أصبحت الشاشة كبيرة، تأكد من إغلاق القائمة وإخفاء الـ backdrop
-        if (sidebar && backdrop) {
-          sidebar.classList.remove('translate-x-full');
-          backdrop.classList.add('hidden');
-          backdrop.style.opacity = '';
-          document.body.classList.remove('sidebar-open');
-        }
+        // على سطح المكتب، تأكد من أن الشريط مرئي وأن الخلفية مخفية
+        sidebar.style.transform = '';
+        backdrop.style.display = 'none';
+        backdrop.style.opacity = '';
+        document.body.classList.remove('sidebar-open');
       } else {
-        // في حالة الجوال، تأكد من أن القائمة مغلقة عند بدء التحميل
-        if (sidebar && backdrop && !sidebar.classList.contains('translate-x-full')) {
-          // إذا كانت القائمة مفتوحة بشكل غير متوقع في الجوال عند تغيير الحجم، أغلقها
-          closeSidebar();
+        // على الجوال، تأكد من أن الشريط مخفي افتراضيًا
+        if (sidebar.style.transform !== 'translateX(0)') {
+          sidebar.style.transform = 'translateX(100%)';
         }
+        backdrop.style.display = 'none';
+        backdrop.style.opacity = '0';
+        document.body.classList.remove('sidebar-open');
       }
     });
+
+    // تهيئة الحالة الأولية للشريط الجانبي
+    if (window.innerWidth < 1024) {
+      sidebar.style.transform = 'translateX(100%)';
+      backdrop.style.display = 'none';
+      backdrop.style.opacity = '0';
+    } else {
+      sidebar.style.transform = '';
+      backdrop.style.display = 'none';
+      backdrop.style.opacity = '';
+    }
 
     // Tabs
     const navItems = document.querySelectorAll('.nav-item');
@@ -1144,13 +1158,12 @@
       const resultsHtml = results.map(result => {
         const playerName = result.playerName || 'غير معروف';
         const playerPhone = result.playerPhone || 'غير متوفر';
-        const uploadedAt = result.uploadedAt ? new Date(result.uploadedAt).toLocaleDateString('ar-EG') : 'غير معروف';
+        // Removed uploadedAt variable as it's no longer used
 
         return `
           <tr class="table-row hover:bg-primary-light/5">
             <td class="px-5 py-3 whitespace-nowrap">${playerName}</td>
             <td class="px-5 py-3 whitespace-nowrap">${playerPhone}</td>
-            <td class="px-5 py-3 whitespace-nowrap text-gray-400">${uploadedAt}</td>
             <td class="px-5 py-3 whitespace-nowrap">
               ${result.fileUrl ? `
                 <a href="${result.fileUrl}" target="_blank"
@@ -1428,7 +1441,7 @@
       try {
         const response = await fetch('/admin/logout');
         const data = await response.json();
-        if (data.success) window.location.href = '/admin-login.html';
+        if (data.success) window.location.href = '/login';
       } catch (error) {
         console.error('Logout error:', error);
         showError('حدث خطأ أثناء تسجيل الخروج');
