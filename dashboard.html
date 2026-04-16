@@ -115,6 +115,7 @@
       background: rgba(10, 15, 26, 0.95);
       backdrop-filter: blur(16px);
       border-left: 1px solid rgba(0, 212, 255, 0.3);
+      transition: transform 0.3s ease-in-out;
     }
 
     /* عناصر القائمة */
@@ -161,6 +162,20 @@
     body.light-mode .stat-card {
       background: rgba(255, 255, 255, 0.7);
     }
+
+    /* إضافة تحسين للـ backdrop */
+    #backdrop {
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      transition: opacity 0.3s ease;
+    }
+    .sidebar-transition {
+      transition: transform 0.3s ease-in-out;
+    }
+    /* منع التمرير عند فتح القائمة */
+    body.sidebar-open {
+      overflow: hidden;
+    }
   </style>
 </head>
 
@@ -169,8 +184,8 @@
   <!-- Toasts -->
   <div id="toastHost" class="fixed top-4 right-4 z-[60] space-y-2"></div>
 
-  <!-- Mobile backdrop -->
-  <div id="backdrop" class="fixed inset-0 bg-black/60 hidden z-40 backdrop-blur-sm"></div>
+  <!-- Mobile backdrop - طبقة خلفية للقائمة الجانبية -->
+  <div id="backdrop" class="fixed inset-0 bg-black/60 hidden z-40"></div>
 
   <div class="min-h-screen relative z-10">
     <div class="lg:flex">
@@ -178,13 +193,11 @@
       <aside
         id="sidebar"
         class="fixed lg:sticky top-0 right-0 z-50 lg:z-10 h-screen w-[290px] lg:w-[300px]
-               -translate-x-0 translate-y-0
+               transition-transform duration-300 ease-out
+               translate-x-full lg:translate-x-0
                glass-panel
                border-l border-primary-light/20
-               shadow-2xl
-               transform lg:transform-none
-               transition-transform duration-300 ease-out
-               translate-x-full lg:translate-x-0"
+               shadow-2xl"
       >
         <!-- Brand -->
         <div class="h-16 px-4 flex items-center justify-between border-b border-primary-light/20">
@@ -842,26 +855,69 @@
       localStorage.setItem('dhMode', next);
     });
 
-    // Sidebar mobile
+    // ======================
+    // Sidebar & Backdrop Logic (تم إصلاحها)
+    // ======================
     const sidebar = document.getElementById('sidebar');
     const backdrop = document.getElementById('backdrop');
     const openSidebarMobile = document.getElementById('openSidebarMobile');
     const closeSidebarMobile = document.getElementById('closeSidebarMobile');
 
+    // دالة فتح القائمة الجانبية
     function openSidebar() {
-      sidebar.classList.remove('translate-x-full');
-      backdrop.classList.remove('hidden');
-      document.body.style.overflow = 'hidden';
-    }
-    function closeSidebar() {
-      sidebar.classList.add('translate-x-full');
-      backdrop.classList.add('hidden');
-      document.body.style.overflow = '';
+      if (window.innerWidth < 1024) { // فقط في وضع الجوال
+        sidebar.classList.remove('translate-x-full');
+        backdrop.classList.remove('hidden');
+        document.body.classList.add('sidebar-open'); // منع التمرير
+        // إضافة تأثير الشفافية للـ backdrop
+        backdrop.style.opacity = '0';
+        backdrop.style.display = 'block';
+        setTimeout(() => { backdrop.style.opacity = '1'; }, 10);
+      }
     }
 
-    openSidebarMobile.addEventListener('click', openSidebar);
-    closeSidebarMobile.addEventListener('click', closeSidebar);
-    backdrop.addEventListener('click', closeSidebar);
+    // دالة إغلاق القائمة الجانبية
+    function closeSidebar() {
+      if (window.innerWidth < 1024) {
+        sidebar.classList.add('translate-x-full');
+        backdrop.style.opacity = '0';
+        document.body.classList.remove('sidebar-open');
+        setTimeout(() => {
+          backdrop.classList.add('hidden');
+          backdrop.style.display = '';
+        }, 300);
+      }
+    }
+
+    // ربط الأحداث
+    if (openSidebarMobile) {
+      openSidebarMobile.addEventListener('click', openSidebar);
+    }
+    if (closeSidebarMobile) {
+      closeSidebarMobile.addEventListener('click', closeSidebar);
+    }
+    if (backdrop) {
+      backdrop.addEventListener('click', closeSidebar);
+    }
+
+    // عند تغيير حجم النافذة، إذا كانت القائمة مفتوحة في وضع الجوال وتم تغيير الحجم إلى سطح المكتب
+    window.addEventListener('resize', function() {
+      if (window.innerWidth >= 1024) {
+        // إذا أصبحت الشاشة كبيرة، تأكد من إغلاق القائمة وإخفاء الـ backdrop
+        if (sidebar && backdrop) {
+          sidebar.classList.remove('translate-x-full');
+          backdrop.classList.add('hidden');
+          backdrop.style.opacity = '';
+          document.body.classList.remove('sidebar-open');
+        }
+      } else {
+        // في حالة الجوال، تأكد من أن القائمة مغلقة عند بدء التحميل
+        if (sidebar && backdrop && !sidebar.classList.contains('translate-x-full')) {
+          // إذا كانت القائمة مفتوحة بشكل غير متوقع في الجوال عند تغيير الحجم، أغلقها
+          closeSidebar();
+        }
+      }
+    });
 
     // Tabs
     const navItems = document.querySelectorAll('.nav-item');
@@ -1081,7 +1137,7 @@
       }
 
       if (results.length === 0) {
-        resultsTable.innerHTML = `<tr><td colspan="4" class="px-5 py-6 text-center text-gray-500">لا توجد نتائج معتمدة حتى الآن</td></tr>`;
+        resultsTable.innerHTML = `<tr><td colspan="3" class="px-5 py-6 text-center text-gray-500">لا توجد نتائج معتمدة حتى الآن</td></tr>`;
         return;
       }
 
